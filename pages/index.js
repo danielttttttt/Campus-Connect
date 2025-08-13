@@ -35,9 +35,9 @@ export default function LandingPage() {
 
       <footer className="mt-16 text-gray-500 text-sm">
         <div className="flex space-x-6">
-          <Link href="#" className="hover:text-blue-600">Contact</Link>
-          <Link href="#" className="hover:text-blue-600">About</Link>
-          <Link href="#" className="hover:text-blue-600">Help</Link>
+          <Link href="/contact" className="hover:text-blue-600 transition-colors">Contact</Link>
+          <Link href="/about" className="hover:text-blue-600 transition-colors">About</Link>
+          <Link href="/help" className="hover:text-blue-600 transition-colors">Help</Link>
         </div>
       </footer>
     </div>
