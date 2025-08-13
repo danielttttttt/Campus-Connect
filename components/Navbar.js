@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { FiMessageSquare, FiPlus } from 'react-icons/fi';
 
 export default function Navbar() {
   const router = useRouter();
@@ -38,7 +39,16 @@ export default function Navbar() {
                 {link.name}
               </Link>
             ))}
-            <Link href="/create-post" className="btn-primary text-sm px-4 py-2">Create Post</Link>
+            <Link href="/create-post" className="btn-primary text-sm px-4 py-2 flex items-center">
+              <FiPlus className="mr-1" /> Create Post
+            </Link>
+            <Link 
+              href="/messages" 
+              className={`p-2 rounded-full hover:bg-gray-100 ${isActive('/messages') ? 'text-blue-600' : 'text-gray-600'}`}
+              title="Messages"
+            >
+              <FiMessageSquare size={20} />
+            </Link>
             <button onClick={handleLogout} className="text-gray-600 hover:text-blue-600 text-sm font-medium">Logout</button>
           </div>
 
@@ -66,7 +76,15 @@ export default function Navbar() {
               </Link>
             ))}
             <div className="border-t border-gray-200 my-2"></div>
-            <Link href="/create-post" className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100">Create Post</Link>
+            <Link href="/create-post" className="flex items-center w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100">
+              <FiPlus className="mr-2" /> Create Post
+            </Link>
+            <Link 
+              href="/messages" 
+              className={`flex items-center w-full text-left px-3 py-2 rounded-md text-base font-medium ${isActive('/messages') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}
+            >
+              <FiMessageSquare className="mr-2" /> Messages
+            </Link>
             <button onClick={handleLogout} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100">Logout</button>
         </div>
       </div>
