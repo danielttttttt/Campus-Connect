@@ -8,7 +8,7 @@ const posts = [
     category: 'Announcements',
     title: 'Welcome to the new semester!',
     content: 'We are excited to have everyone back on campus. Please check the updated guidelines for campus access.',
-    imageUrl: 'https://images.unsplash.com/photo-1503676260728-1c64c1a248bf?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
     likes: 125,
     comments: 12,
     timestamp: '2023-09-01T10:00:00Z',
