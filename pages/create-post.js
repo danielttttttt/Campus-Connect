@@ -36,13 +36,28 @@ export default function CreatePost() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (validateForm()) {
-      console.log('New Post Data:', { ...formData, image: imagePreview });
-      // Placeholder for API submission
-      alert('Post created successfully! (Check console for data)');
-      router.push('/feed');
+      try {
+        const res = await fetch('/api/posts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ ...formData, imageUrl: imagePreview }),
+        });
+
+        if (res.ok) {
+          alert('Post created successfully!');
+          router.push('/feed');
+        } else {
+          alert('Failed to create post. Please try again.');
+        }
+      } catch (error) {
+        console.error('An error occurred:', error);
+        alert('An error occurred while creating the post.');
+      }
     }
   };
 

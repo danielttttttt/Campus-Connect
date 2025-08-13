@@ -52,5 +52,26 @@ const posts = [
 ];
 
 export default function handler(req, res) {
-  res.status(200).json(posts);
+  if (req.method === 'POST') {
+    const { category, title, content, imageUrl } = req.body;
+
+    const newPost = {
+      id: posts.length + 1,
+      author: 'New User', // Placeholder until auth is implemented
+      profilePic: 'https://i.pravatar.cc/150?u=new_user', // Placeholder
+      category,
+      title,
+      content,
+      imageUrl: imageUrl || null,
+      likes: 0,
+      comments: 0,
+      timestamp: new Date().toISOString(),
+    };
+
+    posts.unshift(newPost); // Add to the beginning of the array
+    res.status(201).json(newPost);
+  } else {
+    // Handle GET request
+    res.status(200).json(posts);
+  }
 }
