@@ -8,7 +8,7 @@ export default function TrendingSidebar({ posts }) {
     .slice(0, 3);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-5 sticky top-6">
+    <div className="bg-white rounded-xl shadow-sm p-5 sticky top-20">
       <div className="flex items-center mb-4">
         <FiTrendingUp className="text-blue-600 mr-2" />
         <h3 className="font-semibold text-gray-900">Trending Now</h3>
