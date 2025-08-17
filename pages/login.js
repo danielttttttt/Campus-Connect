@@ -1,5 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import { useAuth } from '../context/AuthContext';
+import { VALIDATION_RULES } from '../utils/constants';
+import { isValidEmail } from '../utils/helpers';
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -8,6 +14,17 @@ export default function Login() {
     rememberMe: false,
   });
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const router = useRouter();
+  const { login, isAuthenticated, isLoading } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      router.push('/feed');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -19,17 +36,46 @@ export default function Login() {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.email) newErrors.email = 'Email is required';
-    if (!formData.password) newErrors.password = 'Password is required';
+
+    if (!formData.email.trim()) {
+      newErrors.email = VALIDATION_RULES.EMAIL.REQUIRED;
+    } else if (!isValidEmail(formData.email)) {
+      newErrors.email = VALIDATION_RULES.EMAIL.INVALID;
+    }
+
+    if (!formData.password) {
+      newErrors.password = VALIDATION_RULES.PASSWORD.REQUIRED;
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      console.log('Login attempt with:', formData);
-      // TODO: Implement actual login logic
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const result = await login({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (result.success) {
+        router.push('/feed');
+      } else {
+        setErrors({ general: result.error });
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setErrors({ general: 'An unexpected error occurred. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -38,33 +84,37 @@ export default function Login() {
       <div className="auth-card">
         <h1 className="auth-title">Campus Connect</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="input-field mt-1"
-              placeholder="Enter your email"
-            />
-            {errors.email && <p className="error-text">{errors.email}</p>}
-          </div>
-          
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className="input-field mt-1"
-              placeholder="Enter your password"
-            />
-            {errors.password && <p className="error-text">{errors.password}</p>}
-          </div>
+          {errors.general && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-3">
+              <p className="text-red-600 text-sm">{errors.general}</p>
+            </div>
+          )}
+
+          <Input
+            label="Email"
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="Enter your email"
+            error={errors.email}
+            required
+            fullWidth
+            autoComplete="email"
+          />
+
+          <Input
+            label="Password"
+            type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            placeholder="Enter your password"
+            error={errors.password}
+            required
+            fullWidth
+            autoComplete="current-password"
+          />
 
           <div className="flex items-center justify-between">
             <div className="flex items-center">
@@ -85,9 +135,14 @@ export default function Login() {
             </Link>
           </div>
 
-          <button type="submit" className="btn-primary">
-            Login
-          </button>
+          <Button
+            type="submit"
+            loading={isSubmitting}
+            disabled={isSubmitting}
+            fullWidth
+          >
+            {isSubmitting ? 'Signing in...' : 'Sign In'}
+          </Button>
 
           <div className="text-center mt-4">
             <span className="text-sm text-gray-600">Don't have an account? </span>

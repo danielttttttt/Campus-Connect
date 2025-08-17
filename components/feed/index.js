@@ -1,72 +1,70 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiPlus } from 'react-icons/fi';
 import CategoryFilter from './CategoryFilter';
 import PostCard from './PostCard';
 import PostSkeleton from './PostSkeleton';
 import TrendingSidebar from './TrendingSidebar';
+import Button from '../ui/Button';
+import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
+import { ApiService } from '../../utils/api';
+import { withErrorBoundary } from '../ErrorBoundary';
 
-// Mock data fetching
-const fetchPosts = async () => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  const res = await fetch('/api/posts');
-  const data = await res.json();
-  return data;
-};
-
-export default function Feed() {
-  const [posts, setPosts] = useState([]);
-  const [filteredPosts, setFilteredPosts] = useState([]);
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [isLoading, setIsLoading] = useState(true);
+function Feed() {
   const [isMounted, setIsMounted] = useState(false);
+  const {
+    posts,
+    filteredPosts,
+    activeCategory,
+    isLoading,
+    setPosts,
+    setActiveCategory,
+    setLoading,
+    likePost,
+    showError
+  } = useApp();
+  const { isAuthenticated } = useAuth();
+
+  // Fetch posts on mount
+  const fetchPosts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const fetchedPosts = await ApiService.getPosts();
+      setPosts(fetchedPosts);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      showError('Failed to load posts. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [setPosts, setLoading, showError]);
 
   useEffect(() => {
     setIsMounted(true);
-    const getPosts = async () => {
-      try {
-        setIsLoading(true);
-        const fetchedPosts = await fetchPosts();
-        setPosts(fetchedPosts);
-        setFilteredPosts(fetchedPosts);
-      } catch (error) {
-        console.error('Error fetching posts:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    getPosts();
-  }, []);
-
-  const handleFilter = (category) => {
-    setActiveCategory(category);
-    if (category === 'All') {
-      setFilteredPosts(posts);
-    } else {
-      const filtered = posts.filter(post => post.category === category);
-      setFilteredPosts(filtered);
+    if (posts.length === 0) {
+      fetchPosts();
     }
-  };
+  }, [fetchPosts, posts.length]);
 
-  const handleLike = (postId, isLiked) => {
-    setPosts(currentPosts =>
-      currentPosts.map(post =>
-        post.id === postId 
-          ? { ...post, likes: isLiked ? post.likes + 1 : Math.max(0, post.likes - 1) } 
-          : post
-      )
-    );
+  const handleFilter = useCallback((category) => {
+    setActiveCategory(category);
+  }, [setActiveCategory]);
 
-    setFilteredPosts(currentPosts =>
-      currentPosts.map(post =>
-        post.id === postId 
-          ? { ...post, likes: isLiked ? post.likes + 1 : Math.max(0, post.likes - 1) } 
-          : post
-      )
-    );
-  };
+  const handleLike = useCallback(async (postId, isLiked) => {
+    try {
+      // Optimistic update
+      likePost(postId, isLiked);
+
+      // In a real app, you would call the API here
+      // await ApiService.likePost(postId, isLiked);
+    } catch (error) {
+      console.error('Error liking post:', error);
+      // Revert optimistic update
+      likePost(postId, !isLiked);
+      showError('Failed to update like. Please try again.');
+    }
+  }, [likePost, showError]);
 
   if (!isMounted) {
     return null;
@@ -79,11 +77,37 @@ export default function Feed() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Sidebar - Categories */}
           <div className="lg:col-span-3 space-y-6">
+            {/* Create Post Button */}
+            <div className="bg-white rounded-xl shadow-sm p-5">
+              {isAuthenticated ? (
+                <Button
+                  as="a"
+                  href="/create-post"
+                  leftIcon={<FiPlus />}
+                  fullWidth
+                  className="justify-center"
+                >
+                  Create Post
+                </Button>
+              ) : (
+                <Button
+                  as="a"
+                  href="/login"
+                  variant="outline"
+                  fullWidth
+                  className="justify-center"
+                >
+                  Login to Create Post
+                </Button>
+              )}
+            </div>
+
+            {/* Categories */}
             <div className="bg-white rounded-xl shadow-sm p-5">
               <h3 className="font-semibold text-gray-900 mb-4">Categories</h3>
-              <CategoryFilter 
-                activeCategory={activeCategory} 
-                onSelectCategory={handleFilter} 
+              <CategoryFilter
+                activeCategory={activeCategory}
+                onSelectCategory={handleFilter}
               />
             </div>
           </div>
@@ -143,3 +167,5 @@ export default function Feed() {
     </div>
   );
 }
+
+export default withErrorBoundary(Feed);

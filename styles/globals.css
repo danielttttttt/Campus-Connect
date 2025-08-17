@@ -26,6 +26,14 @@ body {
   @apply bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition-colors;
 }
 
+.error-text {
+  @apply text-red-600 text-sm mt-1;
+}
+
+.link-text {
+  @apply text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors;
+}
+
 .link-text {
   @apply text-blue-600 hover:text-blue-800 text-sm;
 }

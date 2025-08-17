@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion';
 import { FaHeart, FaRegHeart, FaRegComment, FaShare, FaEllipsisH } from 'react-icons/fa';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { formatRelativeTime } from '../../utils/helpers';
 
-export default function PostCard({ post, onLike }) {
+const PostCard = memo(function PostCard({ post, onLike }) {
   const [isLiked, setIsLiked] = useState(false);
   const [localLikes, setLocalLikes] = useState(post.likes);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -58,13 +59,7 @@ export default function PostCard({ post, onLike }) {
             <div>
               <h4 className="font-semibold text-gray-900">{post.author}</h4>
               <time className="text-xs text-gray-500">
-                {new Date(post.timestamp).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
+                {formatRelativeTime(post.timestamp)}
               </time>
             </div>
           </div>
@@ -141,4 +136,6 @@ export default function PostCard({ post, onLike }) {
       </div>
     </motion.article>
   );
-}
+});
+
+export default PostCard;

@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { FiMessageSquare, FiPlus } from 'react-icons/fi';
+import { FiMessageSquare, FiPlus, FiLogOut } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
+import Button from './ui/Button';
 
 export default function Navbar() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const { user, logout, isAuthenticated } = useAuth();
 
   const navLinks = [
     { name: 'Feed', href: '/feed' },
@@ -13,10 +16,13 @@ export default function Navbar() {
     { name: 'Profile', href: '/profile' },
   ];
 
-  const handleLogout = () => {
-    console.log('User logged out');
-    // In a real app, you would clear auth tokens here
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const isActive = (href) => router.pathname === href;

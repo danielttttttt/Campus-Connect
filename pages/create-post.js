@@ -1,9 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Navbar from '../components/Navbar';
-
-const categories = ['Announcements', 'Events', 'Lost & Found'];
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
+import { ApiService } from '../utils/api';
+import { createObjectURL, cleanupObjectURLs, isValidFileType } from '../utils/helpers';
+import { FILE_UPLOAD, VALIDATION_RULES, POST_CATEGORIES } from '../utils/constants';
 
 export default function CreatePost() {
   const [formData, setFormData] = useState({
@@ -12,8 +17,27 @@ export default function CreatePost() {
     content: '',
   });
   const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const router = useRouter();
+  const { addPost, showSuccess, showError } = useApp();
+  const { user, isAuthenticated } = useAuth();
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, router]);
+
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      cleanupObjectURLs();
+    };
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -23,41 +47,100 @@ export default function CreatePost() {
   const handleImageChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setImagePreview(URL.createObjectURL(file));
+
+      // Validate file type
+      if (!isValidFileType(file)) {
+        setErrors(prev => ({
+          ...prev,
+          image: 'Please select a valid image file (JPEG, PNG, GIF, or WebP)'
+        }));
+        return;
+      }
+
+      // Validate file size
+      if (file.size > FILE_UPLOAD.MAX_SIZE) {
+        setErrors(prev => ({
+          ...prev,
+          image: 'File size must be less than 5MB'
+        }));
+        return;
+      }
+
+      // Clean up previous image URL
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+
+      // Create new object URL
+      const newImageUrl = createObjectURL(file);
+      setImagePreview(newImageUrl);
+      setImageFile(file);
+
+      // Clear any previous image errors
+      setErrors(prev => {
+        const { image, ...rest } = prev;
+        return rest;
+      });
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.title) newErrors.title = 'Title is required';
-    if (!formData.content) newErrors.content = 'Content is required';
-    if (!formData.category) newErrors.category = 'Category is required';
+
+    if (!formData.title.trim()) {
+      newErrors.title = VALIDATION_RULES.POST.TITLE_REQUIRED;
+    } else if (formData.title.length > 100) {
+      newErrors.title = VALIDATION_RULES.POST.TITLE_MAX_LENGTH;
+    }
+
+    if (!formData.content.trim()) {
+      newErrors.content = VALIDATION_RULES.POST.CONTENT_REQUIRED;
+    } else if (formData.content.length > 1000) {
+      newErrors.content = VALIDATION_RULES.POST.CONTENT_MAX_LENGTH;
+    }
+
+    if (!formData.category) {
+      newErrors.category = VALIDATION_RULES.POST.CATEGORY_REQUIRED;
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      try {
-        const res = await fetch('/api/posts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ ...formData, imageUrl: imagePreview }),
-        });
 
-        if (res.ok) {
-          alert('Post created successfully!');
-          router.push('/feed');
-        } else {
-          alert('Failed to create post. Please try again.');
-        }
-      } catch (error) {
-        console.error('An error occurred:', error);
-        alert('An error occurred while creating the post.');
-      }
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const postData = {
+        ...formData,
+        imageUrl: imagePreview,
+        author: user?.name || 'Anonymous',
+        profilePic: user?.profilePic || 'https://i.pravatar.cc/150?u=anonymous',
+      };
+
+      const newPost = await ApiService.createPost(postData);
+
+      // Add to global state
+      addPost(newPost);
+
+      // Show success message
+      showSuccess('Post created successfully!');
+
+      // Cleanup and redirect
+      cleanupObjectURLs();
+      router.push('/feed');
+
+    } catch (error) {
+      console.error('Error creating post:', error);
+      showError(error.message || 'Failed to create post. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -79,7 +162,9 @@ export default function CreatePost() {
                 onChange={handleChange}
                 className="input-field mt-1"
               >
-                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                {POST_CATEGORIES.map(category => (
+                  <option key={category.value} value={category.name}>{category.name}</option>
+                ))}
               </select>
               {errors.category && <p className="error-text">{errors.category}</p>}
             </div>
@@ -122,19 +207,49 @@ export default function CreatePost() {
                 onChange={handleImageChange}
                 className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
               />
+              {errors.image && <p className="text-red-600 text-sm mt-1">{errors.image}</p>}
             </div>
 
             {imagePreview && (
               <div className="mt-4">
                 <p className="text-sm font-medium text-gray-700 mb-2">Image Preview:</p>
-                <img src={imagePreview} alt="Preview" className="rounded-lg max-h-60 w-full object-cover" />
+                <div className="relative">
+                  <img src={imagePreview} alt="Preview" className="rounded-lg max-h-60 w-full object-cover" />
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    onClick={() => {
+                      if (imagePreview) {
+                        URL.revokeObjectURL(imagePreview);
+                      }
+                      setImagePreview(null);
+                      setImageFile(null);
+                    }}
+                    className="absolute top-2 right-2"
+                  >
+                    Remove
+                  </Button>
+                </div>
               </div>
             )}
 
-            <div className="flex justify-end">
-              <button type="submit" className="btn-primary">
-                Submit Post
-              </button>
+            <div className="flex justify-end space-x-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.back()}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                loading={isSubmitting}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Creating Post...' : 'Create Post'}
+              </Button>
             </div>
           </form>
         </div>
